@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function member(familyId) {
+      return request.auth != null && exists(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid));
+    }
+    function student(familyId) {
+      return member(familyId) && get(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid)).data.role == 'student';
+    }
+    function recordOK() {
+      return request.resource.data.keys().hasOnly(['read','practice','correct','minutes','reason','note','updatedAt'])
+        && request.resource.data.read is bool
+        && request.resource.data.practice is bool
+        && request.resource.data.correct is bool
+        && (request.resource.data.minutes == '' || (request.resource.data.minutes is int && request.resource.data.minutes >= 0 && request.resource.data.minutes <= 600))
+        && request.resource.data.reason in ['', 'homework', 'prerequisite', 'method', 'event', 'too_much']
+        && request.resource.data.note is string && request.resource.data.note.size() <= 2000
+        && request.resource.data.updatedAt is timestamp;
+    }
+    function dayOK() {
+      return request.resource.data.keys().hasOnly(['homeworkDone','hw','listen','anki','availableMinutes','updatedAt'])
+        && request.resource.data.homeworkDone is bool
+        && (request.resource.data.hw == '' || (request.resource.data.hw is int && request.resource.data.hw >= 0 && request.resource.data.hw <= 600))
+        && (request.resource.data.listen == '' || (request.resource.data.listen is int && request.resource.data.listen >= 0 && request.resource.data.listen <= 180))
+        && (request.resource.data.anki == '' || (request.resource.data.anki is int && request.resource.data.anki >= 0 && request.resource.data.anki <= 120))
+        && request.resource.data.availableMinutes is int && request.resource.data.availableMinutes >= 0 && request.resource.data.availableMinutes <= 180
+        && request.resource.data.updatedAt is timestamp;
+    }
+    match /families/{familyId} {
+      allow read, write: if false;
+      match /members/{uid} {
+        allow get: if request.auth != null && request.auth.uid == uid;
+        allow list, create, update, delete: if false;
+      }
+      match /records/{taskId} {
+        allow read: if member(familyId);
+        allow create, update: if student(familyId) && taskId.matches('[A-Za-z0-9_-]{1,32}') && recordOK();
+        allow delete: if false;
+      }
+      match /days/{date} {
+        allow read: if member(familyId);
+        allow create, update: if student(familyId) && date.matches('\\d{4}-\\d{2}-\\d{2}') && dayOK();
+        allow delete: if false;
+      }
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
