@@ -55,6 +55,7 @@ let state={records:{},days:{}},storageOK=true,cloudMode=window.CAP_FIREBASE?.ena
 try{if(cloudMode==='local'){const s=JSON.parse(localStorage.getItem(key)||'null');if(s&&s.records&&s.days)state=s;}}catch{storageOK=false;}
 const taipeiToday=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 $('#day').value=taipeiToday();
+$('#first').classList.toggle('hidden',taipeiToday()>'2026-10-07');
 const escapeHTML=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const day=()=>$('#day').value,record=id=>state.records[id]||(state.records[id]={}),dayRecord=()=>state.days[day()]||(state.days[day()]={});
 const complete=r=>r&&r.read&&r.practice&&r.correct;
