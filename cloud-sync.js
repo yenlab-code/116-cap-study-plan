@@ -81,7 +81,7 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
       const old = await tx.get(ref);
       const base = kind === 'records'
         ? {read:false, practice:false, correct:false, minutes:'', reason:'', note:''}
-        : {homeworkDone:false, hw:'', listen:'', anki:'', availableMinutes:window.capScheduler.capacity(id, {})};
+        : {homeworkDone:false, hw:'', listen:'', anki:'', availableMinutes:''};
       tx.set(ref, {...base, ...(old.exists() ? old.data() : {}), ...patch, updatedAt:dbSDK.serverTimestamp()});
     });
   }
