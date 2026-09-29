@@ -23,7 +23,7 @@ service cloud.firestore {
         && (request.resource.data.hw == '' || (request.resource.data.hw is int && request.resource.data.hw >= 0 && request.resource.data.hw <= 600))
         && (request.resource.data.listen == '' || (request.resource.data.listen is int && request.resource.data.listen >= 0 && request.resource.data.listen <= 180))
         && (request.resource.data.anki == '' || (request.resource.data.anki is int && request.resource.data.anki >= 0 && request.resource.data.anki <= 120))
-        && request.resource.data.availableMinutes is int && request.resource.data.availableMinutes >= 0 && request.resource.data.availableMinutes <= 180
+        && (request.resource.data.availableMinutes == '' || (request.resource.data.availableMinutes is int && request.resource.data.availableMinutes >= 0 && request.resource.data.availableMinutes <= 180))
         && request.resource.data.updatedAt is timestamp;
     }
     match /families/{familyId} {
