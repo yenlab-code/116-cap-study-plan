@@ -1,4 +1,4 @@
-/* 首週試行：只搬動有明確未完成回報的任務，不推定未填紀錄的狀態。 */
+/* 已排任務：只搬動有明確未完成回報的任務，不推定未填紀錄的狀態。 */
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -9,11 +9,11 @@
   const dateValue = s => Date.parse(s + 'T00:00:00Z');
   const dateAdd = (s, n) => new Date(dateValue(s) + n * DAY).toISOString().slice(0, 10);
   const completed = r => !!(r && r.read && r.practice && r.correct);
-  function capacity(date, days) {
+  function capacity(date, days, plan = {}) {
     const dow = new Date(dateValue(date)).getUTCDay();
     const defaultMinutes = dow === 1 || dow === 3 || (dow === 0 && date >= '2027-02-28') ? 0 : dow === 0 || dow === 6 ? 90 : 75;
     const override = days[date]?.availableMinutes;
-    return Number.isInteger(override) && override >= 0 && override <= 180 ? override : defaultMinutes;
+    return Number.isInteger(override) && override >= 0 && override <= 180 ? override : (plan.capacityByDate?.[date] ?? defaultMinutes);
   }
   function build(plan, state, today) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(today) || !Number.isFinite(dateValue(today))) throw Error('日期格式錯誤');
@@ -38,7 +38,7 @@
       for (let i = 0; i < 14; i++) {
         const candidate = dateAdd(today, i);
         if ((t.kind === '當前課程' || t.kind === '段考鞏固') && candidate >= '2026-10-14' && t.date < '2026-10-14') break;
-        if ((occupied[candidate] || 0) + t.minutes <= capacity(candidate, days)) {
+        if ((occupied[candidate] || 0) + t.minutes <= capacity(candidate, days, plan)) {
           target = candidate;
           break;
         }
@@ -52,3 +52,4 @@
   }
   return {build, capacity, completed};
 });
+

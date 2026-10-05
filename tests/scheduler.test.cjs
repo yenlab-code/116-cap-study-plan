@@ -16,6 +16,21 @@ assert.equal(result.assigned.F1,'2026-10-01');
 assert.equal(result.moved.length,0);
 
 result = build(plan,{records:{F1:{reason:'homework'}},days:{'2026-10-04':{availableMinutes:0}}},'2026-10-02');
-assert.equal(result.assigned.F1,'2026-10-08');
+assert.equal(result.assigned.F1,'2026-10-13'); // 新任務先占容量，10/8～10/11不硬塞。
 assert.equal(capacity('2027-02-28',{}),0);
 console.log('排程測試通過');
+
+assert.equal(capacity('2026-10-14',{},plan),0);
+assert.equal(capacity('2026-10-15',{},plan),0);
+assert.equal(capacity('2026-10-12',{},plan),0);
+assert.equal(capacity('2026-10-14',{ '2026-10-14':{availableMinutes:20}},plan),20);
+result = build(plan,{records:{W:{reason:'homework'}},days:{}},'2026-10-14');
+assert.ok(!['2026-10-14','2026-10-15'].includes(result.assigned.W));
+const ids = plan.tasks.map(t=>t.id);
+assert.equal(new Set(ids).size,ids.length);
+for(const date of [...new Set(plan.tasks.map(t=>t.date))]){
+ const total=plan.tasks.filter(t=>t.date===date).reduce((sum,t)=>sum+t.minutes,0);
+ assert.ok(total<=capacity(date,{},plan),'原訂任務超出容量：'+date);
+}
+console.log('新增任務與段考日容量檢查通過');
+
