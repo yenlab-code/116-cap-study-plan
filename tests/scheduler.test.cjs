@@ -40,7 +40,7 @@ assert.equal(capacity('2026-10-17',{},plan),145);
 assert.equal(capacity('2026-10-18',{},plan),175);
 assert.equal(capacity('2026-10-18',{'2026-10-18':{availableMinutes:60}},plan),60);
 const totalBetween=(start,end)=>plan.tasks.filter(t=>t.date>=start&&t.date<=end).reduce((s,t)=>s+t.minutes,0);
-assert.equal(totalBetween('2026-10-08','2026-10-13'),370);
+assert.equal(totalBetween('2026-10-08','2026-10-13'),375);
 assert.equal(totalBetween('2026-10-16','2026-10-22'),545);
 assert.equal(plan.weeklyQuota.reduce((s,row)=>s+row[3],0),121);
 assert.equal(plan.weeklyQuota.reduce((s,row)=>s+row[1]+row[2],0),2544);
@@ -48,9 +48,14 @@ const archivedIds=plan.retiredTasks.map(t=>t.id);
 assert.ok(archivedIds.includes('F4'));
 assert.ok(!ids.some(id=>archivedIds.includes(id)));
 result=build(plan,{records:{F4:{read:true,practice:true,correct:true}},days:{}},'2026-10-08');
-assert.equal(result.assigned['F4-I24'],'2026-10-08');
-assert.equal(result.occupied['2026-10-08'],70); // 舊版完成狀態不能讓加量任務自動完成。
+assert.equal(result.assigned['F4-I25'],'2026-10-08');
+assert.equal(result.occupied['2026-10-08'],75); // 舊版完成狀態不能讓加量任務自動完成。
 assert.ok(!Object.hasOwn(result.assigned,'F4'));
+result=build(plan,{records:{'F4-I24':{read:true,practice:true,correct:true},'M4-I24':{read:true,practice:true,correct:true},'M5-I24':{read:true,practice:true,correct:true}},days:{}},'2026-10-08');
+assert.equal(result.occupied['2026-10-08'],75);
+assert.equal(result.occupied['2026-10-09'],70);
+assert.equal(result.assigned['M5-I25'],'2026-10-09');
+assert.ok(archivedIds.includes('F4-I24')&&archivedIds.includes('M4-I24')&&archivedIds.includes('M5-I24'));
 const scriptMatches=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
 for(const match of scriptMatches){if(match[0].includes('application/json')||!match[1].trim())continue;new Function(match[1]);}
 assert.ok(html.includes('for(const t of allTasks){const r=input.records[t.id]'));
