@@ -24,9 +24,9 @@ assert.deepEqual(plan.tasks.filter(t=>t.date==='2026-10-15').map(t=>[t.subject,t
 for(const start of ['2026-10-15','2026-10-22','2026-10-29']){
  const week=plan.tasks.filter(t=>t.date>=start&&t.date<=add(start,6));
  assert.equal(total(start,add(start,6)),545);
- assert.equal(week.filter(t=>t.subject==='總控').reduce((s,t)=>s+t.minutes,0),60);
- assert.equal(week.filter(t=>t.subject==='作文').reduce((s,t)=>s+t.minutes,0),25);
- assert.equal(week.filter(t=>t.coverage).reduce((s,t)=>s+t.minutes,0),460);
+ assert.equal(week.filter(t=>t.subject==='總控').length,0);
+ assert.equal(week.filter(t=>t.subject==='作文').length,0);
+ assert.equal(week.filter(t=>t.coverage).reduce((s,t)=>s+t.minutes,0),545);
  assert.equal(new Set(week.filter(t=>t.coverage).map(t=>t.subject)).size,9);
  for(const offset of [4,6])assert.equal(total(add(start,offset),add(start,offset)),0);
 }
@@ -35,7 +35,7 @@ assert.equal(capacity('2026-10-24',{},plan),145);
 assert.equal(capacity('2026-10-25',{},plan),175);
 assert.equal(capacity('2026-10-25',{'2026-10-25':{availableMinutes:60}},plan),60);
 assert.equal(capacity('2027-02-28',{},plan),0);
-assert.equal(plan.weeklyQuota.reduce((s,r)=>s+r[3],0),121);
+assert.equal(plan.weeklyQuota.reduce((s,r)=>s+r[3],0),137);
 assert.equal(plan.weeklyQuota.reduce((s,r)=>s+r[1]+r[2],0),2544);
 const ids=plan.tasks.map(t=>t.id),archived=plan.retiredTasks.map(t=>t.id);
 assert.equal(new Set([...ids,...archived]).size,ids.length+archived.length);
@@ -85,3 +85,13 @@ for(const date of ['2026-11-09','2026-11-10']){
  assert.ok(r.moved.every(m=>!['2026-11-09','2026-11-10'].includes(m.to)));
 }
 console.log('11/9、11/10畢業旅行保留與未來改排檢查通過');
+
+assert.equal(plan.tasks.filter(t=>['作文','總控'].includes(t.subject)).length,0);
+assert.equal(plan.weeklyQuota.reduce((s,r)=>s+r[5],0),545);
+assert.equal(plan.writingPracticeEnabled,false);
+assert.equal(plan.parentHandlesWeeklyReporting,true);
+for(const subject of ['數學','理化','生物']){
+ const expected={數學:115,理化:115,生物:70}[subject];
+ for(const start of ['2026-10-15','2026-10-22','2026-10-29'])assert.equal(plan.tasks.filter(t=>t.subject===subject&&t.date>=start&&t.date<=add(start,6)).reduce((s,t)=>s+t.minutes,0),expected);
+}
+console.log('作文與學生總控任務取消、85分鐘轉入學科與每週545分鐘檢查通過');
