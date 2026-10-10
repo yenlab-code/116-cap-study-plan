@@ -10,8 +10,9 @@
   const dateAdd = (s, n) => new Date(dateValue(s) + n * DAY).toISOString().slice(0, 10);
   const completed = r => !!(r && r.read && r.practice && r.correct);
   function capacity(date, days, plan = {}) {
+    if (plan.blockedDates?.includes(date)) return 0;
     const dow = new Date(dateValue(date)).getUTCDay();
-    const defaultMinutes = dow === 1 || dow === 3 || (dow === 0 && date >= '2027-02-28') ? 0 : dow === 0 || dow === 6 ? 90 : 75;
+    const defaultMinutes = (dow === 0 && date >= '2027-02-28') ? 0 : date >= (plan.reportStartDate || '9999-12-31') && plan.capacityByWeekday ? plan.capacityByWeekday[dow] : dow === 1 || dow === 3 ? 0 : dow === 0 || dow === 6 ? 90 : 75;
     const override = days[date]?.availableMinutes;
     return Number.isInteger(override) && override >= 0 && override <= 180 ? override : (plan.capacityByDate?.[date] ?? defaultMinutes);
   }
@@ -37,6 +38,8 @@
       let target;
       for (let i = 0; i < 14; i++) {
         const candidate = dateAdd(today, i);
+        if (plan.blockedDates?.includes(candidate)) continue;
+        if (plan.endDate && candidate > plan.endDate) break;
         if ((t.kind === '當前課程' || t.kind === '段考鞏固') && candidate >= '2026-10-14' && t.date < '2026-10-14') break;
         if ((occupied[candidate] || 0) + t.minutes <= capacity(candidate, days, plan)) {
           target = candidate;
@@ -52,4 +55,3 @@
   }
   return {build, capacity, completed};
 });
-
