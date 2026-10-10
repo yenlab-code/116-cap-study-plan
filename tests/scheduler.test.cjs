@@ -4,7 +4,7 @@ const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 const plan=JSON.parse(html.match(/<script id="plan-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
 const total=(a,b)=>plan.tasks.filter(t=>t.date>=a&&t.date<=b).reduce((s,t)=>s+t.minutes,0);
 const add=(s,n)=>new Date(Date.parse(s+'T00:00:00Z')+n*86400000).toISOString().slice(0,10);
-for(const date of plan.blockedDates){
+for(const date of plan.blockedDates.filter(d=>d<='2026-10-14')){
  assert.equal(total(date,date),0);
  assert.equal(capacity(date,{},plan),0);
  assert.equal(capacity(date,{[date]:{availableMinutes:180}},plan),0);
@@ -68,3 +68,20 @@ assert.deepEqual(reportWindow('2026-10-22'),{start:'2026-10-22',end:'2026-10-28'
 assert.ok(html.includes('for(const t of allTasks){const r=input.records[t.id]'));
 assert.ok(html.includes('for(const t of allTasks){const scheduled=assigned[t.id]||t.date'));
 console.log('取消期間封鎖、三週545分鐘、歷史紀錄隔離、教材接續、摘要與語法檢查通過');
+
+
+
+// 預先保留畢業旅行，即使未來延伸計畫或有可用分鐘也不能塞任務。
+for(const date of ['2026-11-09','2026-11-10']){
+ assert.ok(plan.blockedDates.includes(date));
+ assert.equal(capacity(date,{},plan),0);
+ assert.equal(capacity(date,{[date]:{availableMinutes:180}},plan),0);
+ assert.equal(total(date,date),0);
+ assert.match(plan.dayNotes[date],/畢業旅行/);
+ const fixture={...plan,endDate:'2026-11-20',tasks:[{id:'trip-pending',date:'2026-11-08',minutes:25,kind:'國一複習'}]};
+ const state={records:{'trip-pending':{reason:'event'}},days:{'2026-11-09':{availableMinutes:180},'2026-11-10':{availableMinutes:180},'2026-11-11':{availableMinutes:30}}};
+ const r=build(fixture,state,date);
+ assert.equal(r.assigned['trip-pending'],'2026-11-11');
+ assert.ok(r.moved.every(m=>!['2026-11-09','2026-11-10'].includes(m.to)));
+}
+console.log('11/9、11/10畢業旅行保留與未來改排檢查通過');
