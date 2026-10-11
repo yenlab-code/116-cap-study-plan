@@ -13,8 +13,9 @@ const payload={read:true,practice:true,correct:true,minutes:70,note:'書本第24
 assert.deepEqual(mapping.read({'PC-20261018-V26':payload,F1:{read:true}}),{'理化-20261018-V26':payload,F1:{read:true}});
 assert.deepEqual(mapping.read({'理化-20261018-V26':{read:false},'PC-20261018-V26':payload})['理化-20261018-V26'],payload);
 assert.throws(()=>mapping.toStorage('無效/路徑'));
-assert.match(html,/<script src="record-ids.js\?v=2.6.2"><\/script>/);
-assert.match(html,/<script type="module" src="cloud-sync.js\?v=2.6.2"><\/script>/);
+const assetVersion=plan.version.match(/^v(\d+\.\d+\.\d+)/)[1];
+assert.ok(html.includes(`<script src="record-ids.js?v=${assetVersion}"></script>`));
+assert.ok(html.includes(`<script type="module" src="cloud-sync.js?v=${assetVersion}"></script>`));
 (async()=>{
  let authCallback,published,saved;
  const listeners={};
