@@ -11,6 +11,8 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
   const app = initializeApp(settings.config);
   const auth = authSDK.getAuth(app), db = dbSDK.getFirestore(app);
   const root = ['families', settings.familyId];
+  const plan = JSON.parse(document.querySelector('#plan-data').textContent);
+  const recordIds = window.capRecordIds.create([...plan.tasks, ...(plan.retiredTasks || [])]);
   const ui = window.capUI;
   const form = document.querySelector('#signInForm');
   const label = document.querySelector('#accountStatus');
@@ -43,7 +45,7 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
       ui.cloudState('loading', {records:{},days:{}});
     };
     unsubscribers.push(dbSDK.onSnapshot(dbSDK.collection(db, ...root, 'records'), snapshot => {
-      remote.records = Object.fromEntries(snapshot.docs.map(d => [d.id, d.data()]));
+      remote.records = recordIds.read(Object.fromEntries(snapshot.docs.map(d => [d.id, d.data()])));
       recordsReady = true; publish();
     }, failed));
     unsubscribers.push(dbSDK.onSnapshot(dbSDK.collection(db, ...root, 'days'), snapshot => {
@@ -86,7 +88,7 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
     });
   }
   window.capCloud = {
-    writeRecord:(id, patch) => write('records', id, patch),
+    writeRecord:(id, patch) => write('records', recordIds.toStorage(id), patch),
     writeDay:(date, patch) => write('days', date, patch),
     role:() => role
   };
@@ -97,3 +99,4 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
 } else {
   document.querySelector('#accountStatus').textContent = '共用儲存尚未設定；目前只保存在此瀏覽器。';
 }
+
