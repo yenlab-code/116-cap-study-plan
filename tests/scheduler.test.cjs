@@ -21,7 +21,8 @@ assert.equal(plan.endDate,'2026-11-04');
 assert.equal(total('2026-10-10','2026-10-14'),0);
 assert.equal(total('2026-10-15','2026-10-15'),75);
 assert.deepEqual(plan.tasks.filter(t=>t.date==='2026-10-15').map(t=>[t.subject,t.coverage]),[['數學',{start:12,end:18}],['理化',{start:5,end:11}]]);
-for(const start of ['2026-10-15','2026-10-22','2026-10-29']){
+assert.equal(total('2026-10-15','2026-10-21'),400); // 145分鐘已改排，舊卡只留歷史。
+for(const start of ['2026-10-22','2026-10-29']){
  const week=plan.tasks.filter(t=>t.date>=start&&t.date<=add(start,6));
  assert.equal(total(start,add(start,6)),545);
  assert.equal(week.filter(t=>t.subject==='總控').length,0);
@@ -67,7 +68,7 @@ assert.deepEqual(reportWindow('2026-10-21'),{start:'2026-10-15',end:'2026-10-21'
 assert.deepEqual(reportWindow('2026-10-22'),{start:'2026-10-22',end:'2026-10-28'});
 assert.ok(html.includes('for(const t of allTasks){const r=input.records[t.id]'));
 assert.ok(html.includes('for(const t of allTasks){const scheduled=assigned[t.id]||t.date'));
-console.log('取消期間封鎖、三週545分鐘、歷史紀錄隔離、教材接續、摘要與語法檢查通過');
+console.log('取消期間封鎖、補回後每日與每週容量、歷史紀錄隔離、教材接續、摘要與語法檢查通過');
 
 
 
@@ -92,6 +93,6 @@ assert.equal(plan.writingPracticeEnabled,false);
 assert.equal(plan.parentHandlesWeeklyReporting,true);
 for(const subject of ['數學','理化','生物']){
  const expected={數學:115,理化:115,生物:70}[subject];
- for(const start of ['2026-10-15','2026-10-22','2026-10-29'])assert.equal(plan.tasks.filter(t=>t.subject===subject&&t.date>=start&&t.date<=add(start,6)).reduce((s,t)=>s+t.minutes,0),expected);
+ for(const start of ['2026-10-22','2026-10-29'])assert.equal(plan.tasks.filter(t=>t.subject===subject&&t.date>=start&&t.date<=add(start,6)).reduce((s,t)=>s+t.minutes,0),expected);
 }
 console.log('作文與學生總控任務取消、85分鐘轉入學科與每週545分鐘檢查通過');
