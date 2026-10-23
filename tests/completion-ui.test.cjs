@@ -7,7 +7,7 @@ let playwright;try{playwright=require('playwright');}catch{playwright=createRequ
  for(const file of ['completion-rewards.js','scheduler.js','record-ids.js','task-card-updates.js'])fixture=fixture.replace(new RegExp('<script src="'+file.replaceAll('.','\\.')+'(?:\\?[^\"]*)?"></script>'),()=>'<script>'+fs.readFileSync(path.join(root,file),'utf8')+'</script>');
  const installed='C:/Program Files/Google/Chrome/Application/chrome.exe';
  const browser=await playwright.chromium.launch({headless:true,executablePath:process.env.CAP_TEST_CHROME||(fs.existsSync(installed)?installed:undefined)});
- try{for(const viewport of [{width:1200,height:900},{width:390,height:844}]){
+ try{for(const viewport of [{width:1200,height:900},{width:390,height:844},{width:304,height:700}]){
   const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.clock.install({time:new Date('2026-10-23T12:00:00Z')});await page.route('**/*',route=>route.abort());await page.setContent(fixture);
   const selectDay=async day=>{await page.locator('#day').fill(day);await page.locator('#day').dispatchEvent('change');};
@@ -16,6 +16,11 @@ let playwright;try{playwright=require('playwright');}catch{playwright=createRequ
   await selectDay('2026-10-23');
   await page.evaluate(()=>{window.fixtureData={records:{},days:{}};window.writes=[];window.capCloud={writeRecord:async(id,patch)=>{window.writes.push({id,patch});},writeDay:async()=>{}};window.capUI.cloudState('student',window.fixtureData);window.fixtureCard=document.querySelector('#cards [data-id]');window.fixtureId=window.fixtureCard.dataset.id;});
   assert.equal(await page.locator('#countdown').textContent(),'204 天');
+  assert.equal(await page.locator('#countdownWeeks').textContent(),'29 週又 1 天');
+  assert.ok(!/收書|就寢|睡覺/.test(await page.locator('header,.countdown-panel').allTextContents().then(text=>text.join(''))));
+  assert.ok(!/帳面淨額|待完成/.test(await page.locator('#rewardSummary').innerText()));
+  assert.equal(await page.locator('.countdown-date').evaluate(el=>el.getBoundingClientRect().height<45),true,'手機日期不應斷行');
+  if(process.env.CAP_TEST_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.CAP_TEST_SCREENSHOT_DIR,'compact-header-'+viewport.width+'.png')});
   const card=page.locator('#cards [data-id]').first(),box=card.locator('[data-field="done"]'),date=card.locator('[data-field="completedOn"]'),note=card.locator('textarea'),status=card.locator('.status');
   assert.equal(await card.locator('input[type="checkbox"]').count(),1);assert.equal(await card.locator('[data-field="minutes"],[data-field="reason"]').count(),0);assert.equal(await date.isDisabled(),true);
   await card.locator('details summary').click();await box.scrollIntoViewIfNeeded();await box.check();
@@ -36,7 +41,7 @@ let playwright;try{playwright=require('playwright');}catch{playwright=createRequ
   await page.evaluate(()=>{window.capUI.cloudState('signedOut',{records:{},days:{}});window.fixtureData.records[window.fixtureId]={read:true,practice:true,correct:true,note:'舊備註保留'};window.capUI.cloudState('student',window.fixtureData);});
   assert.equal(await date.inputValue(),'');assert.match(await status.textContent(),/完成日期待確認/);assert.equal(await note.inputValue(),'舊備註保留');
   await page.evaluate(()=>window.capUI.cloudState('parent',window.fixtureData));assert.equal(await box.isDisabled(),true);assert.equal(await date.isDisabled(),true);assert.equal(await note.isDisabled(),true);
-  await page.evaluate(()=>window.capUI.cloudState('signedOut',{records:{},days:{}}));assert.match(await page.locator('#rewardSummary').textContent(),/登入家庭帳號/);assert.equal(await box.isDisabled(),true);
+  await page.evaluate(()=>window.capUI.cloudState('signedOut',{records:{},days:{}}));assert.match(await page.locator('#rewardSummary').textContent(),/登入後查看零用金/);assert.equal(await box.isDisabled(),true);
   await selectDay('2026-10-10');assert.equal(await page.locator('#cards [data-id]').count(),0);await selectDay('2026-10-25');assert.equal(await page.locator('#cards [data-id]').count(),4);assert.equal(await page.locator('#stats strong').first().textContent(),'175');await sync();
   await page.locator('#today > .notice summary').click();assert.equal(await page.locator('#catchUpSchedule tbody tr').count(),13);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'頁面出現水平溢出');
   if(process.env.CAP_TEST_SCREENSHOT_DIR){await selectDay('2026-10-23');await card.screenshot({path:path.join(process.env.CAP_TEST_SCREENSHOT_DIR,'completion-card-'+viewport.width+'.png')});await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(process.env.CAP_TEST_SCREENSHOT_DIR,'reward-summary-'+viewport.width+'.png')});}
