@@ -87,9 +87,18 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
       tx.set(ref, {...base, ...(old.exists() ? old.data() : {}), ...patch, updatedAt:dbSDK.serverTimestamp()});
     });
   }
+  // 同一份紀錄依操作順序寫入，避免快速勾選與改日期互相覆蓋。
+  const queues=new Map();
+  function orderedWrite(kind,id,patch){
+    const key=kind+'/'+id,previous=queues.get(key)||Promise.resolve();
+    const next=previous.catch(()=>{}).then(()=>write(kind,id,patch));
+    queues.set(key,next);
+    next.finally(()=>{if(queues.get(key)===next)queues.delete(key);}).catch(()=>{});
+    return next;
+  }
   window.capCloud = {
-    writeRecord:(id, patch) => write('records', recordIds.toStorage(id), patch),
-    writeDay:(date, patch) => write('days', date, patch),
+    writeRecord:(id, patch) => orderedWrite('records', recordIds.toStorage(id), patch),
+    writeDay:(date, patch) => orderedWrite('days', date, patch),
     role:() => role
   };
   } catch (error) {
