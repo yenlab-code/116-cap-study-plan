@@ -92,9 +92,21 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
         if(Object.keys(patch).some(k=>!allowed.includes(k)))throw Error('學生不能修改完成日期，請由家長確認。');
         const next={...base,...before,...patch};
         const done=r=>!!(r.read&&r.practice&&r.correct);
-        Object.assign(next,{recordFormat:2,completedAt:done(next)&&!done(before)?dbSDK.serverTimestamp():(before.completedAt??null),dateOverride:before.dateOverride??null,dateReviewedAt:before.dateReviewedAt??null,dateReviewedBy:before.dateReviewedBy??'',dateAuditId:before.dateAuditId??'',updatedAt:dbSDK.serverTimestamp()});
+        Object.assign(next,{recordFormat:2,completedAt:!done(next)?null:!done(before)?dbSDK.serverTimestamp():(before.completedAt??null),dateOverride:done(next)&&done(before)?before.dateOverride??null:null,dateReviewedAt:before.dateReviewedAt??null,dateReviewedBy:before.dateReviewedBy??'',dateAuditId:before.dateAuditId??'',updatedAt:dbSDK.serverTimestamp()});
         tx.set(ref,next);
       }else tx.set(ref,{...base,...before,...patch,updatedAt:dbSDK.serverTimestamp()});
+    });
+  }
+  async function resetCompletion(id){
+    const user=auth.currentUser;
+    if(role!=='parent'||user?.email?.toLowerCase()!==DATE_EDITOR_EMAIL)throw Error('只有指定家長帳號能清除試勾。');
+    const taskId=recordIds.toStorage(id),ref=dbSDK.doc(db,...root,'records',taskId);
+    const auditRef=dbSDK.doc(dbSDK.collection(db,...root,'completionDateAudit'));
+    await dbSDK.runTransaction(db,async tx=>{
+      const old=await tx.get(ref);if(!old.exists())return;
+      const before=old.data();
+      tx.update(ref,{read:false,practice:false,correct:false,recordFormat:2,completedAt:null,dateOverride:null,dateReviewedAt:dbSDK.serverTimestamp(),dateReviewedBy:user.uid,dateAuditId:auditRef.id,updatedAt:dbSDK.serverTimestamp()});
+      tx.set(auditRef,{taskId,previousDate:before.dateOverride??before.completedAt??null,correctedDate:null,reviewedBy:user.uid,reviewedAt:dbSDK.serverTimestamp()});
     });
   }
   async function correctDate(id,date){
@@ -124,6 +136,7 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
     writeRecord:(id, patch) => orderedWrite('records', recordIds.toStorage(id), patch),
     writeDay:(date, patch) => orderedWrite('days', date, patch),
     correctDate,
+    resetCompletion,
     role:() => role
   };
   } catch (error) {

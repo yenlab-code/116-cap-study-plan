@@ -38,6 +38,7 @@
   }
   // 新格式只信任獨立的伺服器時間／家長更正欄位，備註不能影響計獎。
   function completedOn(r={}){
+    if(!completed(r))return '';
     return r.recordFormat===2?timestampDate(r.dateOverride)||timestampDate(r.completedAt):decode(r.note).date;
   }
   function eligible(task,plan={}){

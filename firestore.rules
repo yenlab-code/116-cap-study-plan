@@ -31,8 +31,8 @@ service cloud.firestore {
     function studentDatesOK(before) {
       let data = request.resource.data;
       let newlyCompleted = done(data) && !done(before);
-      return data.completedAt == (newlyCompleted ? request.time : before.get('completedAt', null))
-        && data.dateOverride == before.get('dateOverride', null)
+      return data.completedAt == (!done(data) ? null : newlyCompleted ? request.time : before.get('completedAt', null))
+        && data.dateOverride == (done(data) && done(before) ? before.get('dateOverride', null) : null)
         && data.dateReviewedAt == before.get('dateReviewedAt', null)
         && data.dateReviewedBy == before.get('dateReviewedBy', '')
         && data.dateAuditId == before.get('dateAuditId', '');
@@ -56,6 +56,20 @@ service cloud.firestore {
         && audit.reviewedBy == request.auth.uid && audit.reviewedAt == request.time
         && audit.previousDate == previousDate;
     }
+    function parentCompletionReset(familyId, taskId) {
+      let data = request.resource.data;
+      let audit = getAfter(/databases/$(database)/documents/families/$(familyId)/completionDateAudit/$(data.dateAuditId)).data;
+      let previousDate = resource.data.get('dateOverride', null) != null ? resource.data.dateOverride : resource.data.get('completedAt', null);
+      return dateEditor(familyId)
+        && data.diff(resource.data).affectedKeys().hasOnly(['read','practice','correct','recordFormat','completedAt','dateOverride','dateReviewedAt','dateReviewedBy','dateAuditId','updatedAt'])
+        && data.read == false && data.practice == false && data.correct == false
+        && data.completedAt == null && data.dateOverride == null
+        && data.dateReviewedAt == request.time && data.dateReviewedBy == request.auth.uid
+        && data.dateAuditId.matches('[A-Za-z0-9_-]{1,64}')
+        && audit.taskId == taskId && audit.correctedDate == null
+        && audit.reviewedBy == request.auth.uid && audit.reviewedAt == request.time
+        && audit.previousDate == previousDate;
+    }
     function dayOK() {
       return request.resource.data.keys().hasOnly(['homeworkDone','hw','listen','anki','availableMinutes','updatedAt'])
         && request.resource.data.homeworkDone is bool
@@ -75,7 +89,7 @@ service cloud.firestore {
         allow read: if member(familyId);
         allow create: if student(familyId) && taskId.matches('[A-Za-z0-9_-]{1,32}') && recordOK() && studentDatesOK({});
         allow update: if taskId.matches('[A-Za-z0-9_-]{1,32}') && recordOK()
-          && ((student(familyId) && studentDatesOK(resource.data)) || parentDateUpdate(familyId, taskId));
+          && ((student(familyId) && studentDatesOK(resource.data)) || parentDateUpdate(familyId, taskId) || parentCompletionReset(familyId, taskId));
         allow delete: if false;
       }
       match /completionDateAudit/{auditId} {
@@ -85,7 +99,12 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['taskId','previousDate','correctedDate','reviewedBy','reviewedAt'])
           && request.resource.data.taskId.matches('[A-Za-z0-9_-]{1,32}')
           && (request.resource.data.previousDate == null || request.resource.data.previousDate is timestamp)
-          && validParentDate(request.resource.data.correctedDate)
+          && (validParentDate(request.resource.data.correctedDate)
+            || (request.resource.data.correctedDate == null
+              && getAfter(/databases/$(database)/documents/families/$(familyId)/records/$(request.resource.data.taskId)).data.read == false
+              && getAfter(/databases/$(database)/documents/families/$(familyId)/records/$(request.resource.data.taskId)).data.practice == false
+              && getAfter(/databases/$(database)/documents/families/$(familyId)/records/$(request.resource.data.taskId)).data.correct == false
+              && getAfter(/databases/$(database)/documents/families/$(familyId)/records/$(request.resource.data.taskId)).data.completedAt == null))
           && request.resource.data.reviewedBy == request.auth.uid && request.resource.data.reviewedAt == request.time
           && getAfter(/databases/$(database)/documents/families/$(familyId)/records/$(request.resource.data.taskId)).data.dateAuditId == auditId
           && getAfter(/databases/$(database)/documents/families/$(familyId)/records/$(request.resource.data.taskId)).data.dateOverride == request.resource.data.correctedDate;

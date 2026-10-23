@@ -11,12 +11,19 @@
       card.classList.toggle('done',done);
       card.querySelector('fieldset').disabled=!canEdit&&!canCorrectDate;
       for(const input of card.querySelectorAll('[data-field]')){
+        if(input.dataset.field==='completedOn'){
+          input.type=canCorrectDate?'date':'text';
+          input.readOnly=!canCorrectDate;
+          input.placeholder='尚未完成';
+        }
         input.disabled=input.dataset.field==='completedOn'?!canCorrectDate||!done:!canEdit;
         const field=input.dataset.field;
         if(input.type==='checkbox')input.checked=done;
         else if(input!==container.ownerDocument.activeElement)input.value=field==='completedOn'?api.completedOn(r):field==='note'?meta.text:r[field]??'';
         if(field==='completedOn')input.max=today;
       }
+      const reset=card.querySelector('[data-action="reset-completion"]');
+      if(reset){reset.hidden=!canCorrectDate;reset.disabled=!canCorrectDate||!(done||r.completedAt||r.dateOverride||meta.date);}
       const status=api.status(task,r,today,plan);
       if(card.querySelector('.status').textContent!==status)card.querySelector('.status').textContent=status;
     }
