@@ -99,7 +99,7 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
   }
   async function resetCompletion(id){
     const user=auth.currentUser;
-    if(role!=='parent'||user?.email?.toLowerCase()!==DATE_EDITOR_EMAIL)throw Error('只有指定家長帳號能清除試勾。');
+    if(role!=='parent'||user?.email?.toLowerCase()!==DATE_EDITOR_EMAIL)throw Error('只有指定家長帳號能清除勾選。');
     const taskId=recordIds.toStorage(id),ref=dbSDK.doc(db,...root,'records',taskId);
     const auditRef=dbSDK.doc(dbSDK.collection(db,...root,'completionDateAudit'));
     await dbSDK.runTransaction(db,async tx=>{
