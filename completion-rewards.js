@@ -31,11 +31,20 @@
     return note;
   }
   const completed=r=>!!(r&&r.read&&r.practice&&r.correct);
+  function timestampDate(value){
+    if(!value)return '';
+    const date=typeof value.toDate==='function'?value.toDate():typeof value.seconds==='number'?new Date(value.seconds*1000):new Date(value);
+    return Number.isFinite(date.getTime())?today(date):'';
+  }
+  // 新格式只信任獨立的伺服器時間／家長更正欄位，備註不能影響計獎。
+  function completedOn(r={}){
+    return r.recordFormat===2?timestampDate(r.dateOverride)||timestampDate(r.completedAt):decode(r.note).date;
+  }
   function eligible(task,plan={}){
     return validDate(task.date)&&task.date>=policy.startDate&&task.date<EXAM_DATE&&!task.cancelled&&!task.rewardExcluded&&!plan.blockedDates?.includes(task.date);
   }
   function classify(task,r={},now=today(),plan={}){
-    const done=completed(r),date=decode(r.note).date,counts=eligible(task,plan);
+    const done=completed(r),date=completedOn(r),counts=eligible(task,plan);
     if(done&&(!date||date>now))return {kind:'unknown',amount:0,done,date,counts};
     if(!counts)return {kind:done?'excluded-done':'excluded',amount:0,done,date,counts};
     if(done)return {kind:date<=task.date?'on-time':'late',amount:date<=task.date?policy.onTime:-policy.late,done,date,counts};
@@ -65,5 +74,5 @@
     const days=Math.round((Date.parse(EXAM_DATE+'T00:00:00Z')-Date.parse(now+'T00:00:00Z'))/86400000);
     return {days:Math.max(0,days),weeks:Math.floor(Math.max(0,days)/7),extraDays:Math.max(0,days)%7,label:days>0?'距離會考還有':now===EXAM_DATE?'今天是會考第一天':now===EXAM_END?'今天是會考第二天':'116 年會考已結束'};
   }
-  return {EXAM_DATE,EXAM_END,policy,validDate,today,decode,encode,completed,eligible,classify,status,summarize,countdown};
+  return {EXAM_DATE,EXAM_END,policy,validDate,today,decode,encode,completed,completedOn,timestampDate,eligible,classify,status,summarize,countdown};
 });

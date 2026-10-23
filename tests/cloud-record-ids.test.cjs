@@ -42,7 +42,7 @@ assert.ok(html.includes(`<script type="module" src="cloud-sync.js?v=${assetVersi
  const completion=require('../completion-rewards.js'),encoded=completion.encode('2026-10-23','補完成備註');
  await window.capCloud.writeRecord('理化-20261023-V27',{read:true,practice:true,correct:true,note:encoded});
  assert.deepEqual(completion.decode(saved.value.note),{date:'2026-10-23',text:'補完成備註'});
- assert.ok(Object.keys(saved.value).every(k=>['read','practice','correct','minutes','reason','note','updatedAt'].includes(k)));
+ assert.ok(Object.keys(saved.value).every(k=>['read','practice','correct','minutes','reason','note','updatedAt','recordFormat','completedAt','dateOverride','dateReviewedAt','dateReviewedBy','dateAuditId'].includes(k)));
  await window.capCloud.writeDay('2026-10-18',{homeworkDone:true});assert.equal(saved.id,'2026-10-18');
  console.log('雲端任務ID無碰撞、完成日期與備註沿用既有欄位、單次完整寫入及重新載入對應檢查通過');
 })().catch(e=>{console.error(e);process.exitCode=1;});

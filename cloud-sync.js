@@ -11,6 +11,7 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
   const app = initializeApp(settings.config);
   const auth = authSDK.getAuth(app), db = dbSDK.getFirestore(app);
   const root = ['families', settings.familyId];
+  const DATE_EDITOR_EMAIL='phonics.playlist@gmail.com';
   const plan = JSON.parse(document.querySelector('#plan-data').textContent);
   const recordIds = window.capRecordIds.create([...plan.tasks, ...(plan.retiredTasks || [])]);
   const ui = window.capUI;
@@ -37,8 +38,9 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
     let recordsReady = false, daysReady = false;
     const publish = () => {
       if (!recordsReady || !daysReady) return;
-      ui.cloudState(role, remote);
-      label.textContent = `${role === 'student' ? '學生可編輯' : '家長唯讀'}：${user.email || '已登入'}｜共用資料已同步`;
+      const editor=role==='parent'&&user.email?.toLowerCase()===DATE_EDITOR_EMAIL;
+      ui.cloudState(editor?'dateEditor':role, remote);
+      label.textContent = `${role === 'student' ? '學生可勾選，日期由系統記錄' : editor?'家長可更正完成日期':'家長唯讀'}：${user.email || '已登入'}｜共用資料已同步`;
     };
     const failed = err => {
       label.textContent = `讀取失敗：${err.message}`;
@@ -84,7 +86,29 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
       const base = kind === 'records'
         ? {read:false, practice:false, correct:false, minutes:'', reason:'', note:''}
         : {homeworkDone:false, hw:'', listen:'', anki:'', availableMinutes:''};
-      tx.set(ref, {...base, ...(old.exists() ? old.data() : {}), ...patch, updatedAt:dbSDK.serverTimestamp()});
+      const before=old.exists()?old.data():{};
+      if(kind==='records'){
+        const allowed=['read','practice','correct','minutes','reason','note'];
+        if(Object.keys(patch).some(k=>!allowed.includes(k)))throw Error('學生不能修改完成日期，請由家長確認。');
+        const next={...base,...before,...patch};
+        const done=r=>!!(r.read&&r.practice&&r.correct);
+        Object.assign(next,{recordFormat:2,completedAt:done(next)&&!done(before)?dbSDK.serverTimestamp():(before.completedAt??null),dateOverride:before.dateOverride??null,dateReviewedAt:before.dateReviewedAt??null,dateReviewedBy:before.dateReviewedBy??'',dateAuditId:before.dateAuditId??'',updatedAt:dbSDK.serverTimestamp()});
+        tx.set(ref,next);
+      }else tx.set(ref,{...base,...before,...patch,updatedAt:dbSDK.serverTimestamp()});
+    });
+  }
+  async function correctDate(id,date){
+    const user=auth.currentUser;
+    if(role!=='parent'||user?.email?.toLowerCase()!==DATE_EDITOR_EMAIL)throw Error('只有指定家長帳號能更正日期。');
+    if(!window.capCompletion.validDate(date)||date>window.capCompletion.today())throw Error('請填有效的實際完成日期，不能晚於今天。');
+    const taskId=recordIds.toStorage(id),ref=dbSDK.doc(db,...root,'records',taskId);
+    const auditRef=dbSDK.doc(dbSDK.collection(db,...root,'completionDateAudit'));
+    const corrected=dbSDK.Timestamp.fromDate(new Date(date+'T00:00:00+08:00'));
+    await dbSDK.runTransaction(db,async tx=>{
+      const old=await tx.get(ref);if(!old.exists())throw Error('請先由學生勾選完成，再更正日期。');
+      const before=old.data();if(!(before.read&&before.practice&&before.correct))throw Error('只能更正已完成任務的日期。');
+      tx.update(ref,{recordFormat:2,completedAt:before.completedAt??null,dateOverride:corrected,dateReviewedAt:dbSDK.serverTimestamp(),dateReviewedBy:user.uid,dateAuditId:auditRef.id,updatedAt:dbSDK.serverTimestamp()});
+      tx.set(auditRef,{taskId,previousDate:before.dateOverride??before.completedAt??null,correctedDate:corrected,reviewedBy:user.uid,reviewedAt:dbSDK.serverTimestamp()});
     });
   }
   // 同一份紀錄依操作順序寫入，避免快速勾選與改日期互相覆蓋。
@@ -99,6 +123,7 @@ if (settings?.enabled && settings.config?.apiKey && settings.config?.projectId &
   window.capCloud = {
     writeRecord:(id, patch) => orderedWrite('records', recordIds.toStorage(id), patch),
     writeDay:(date, patch) => orderedWrite('days', date, patch),
+    correctDate,
     role:() => role
   };
   } catch (error) {

@@ -1,5 +1,17 @@
 # 116 會考小熊讀書室
 
+## v2.9.0：學生日期鎖定、指定家長更正
+
+學生只可勾選完成與填備註；新紀錄的 `completedAt` 使用 Firestore `serverTimestamp()`，規則強制等於 `request.time`，不接受自行指定過去日期。重複勾選或備註更新不重設完成時間；取消後重新完成會使用新的伺服器時間。完成日期欄對學生停用，即使繞過畫面或在備註／備份偽造日期也不能更改新格式的計獎日期。
+
+只有 Firebase 家庭成員角色為 `parent` 且登入電子郵件為 `phonics.playlist@gmail.com` 的帳號可更正已完成任務的日期。家長不能代勾完成、改備註或每日簡記。每次更正使用單次交易同時保存 `dateOverride`、更正者、伺服器更正時間及不可改寫的 `completionDateAudit` 紀錄；原始 `completedAt` 保留。更正日期以台灣午夜的 Timestamp 保存，規則禁止未來日期。
+
+未觸碰的舊紀錄仍按原格式讀取；舊完成紀錄如更新成新格式而無原始伺服器時間，日期先待家長確認，不把備註當成可信時間。既有私人紀錄不批次改寫。學生匯入僅還原作答狀態與文字備註，不能還原／偽造過去的完成日期；家長可確認後更正。離線本機模式只供試用，不具有伺服器防竄改保證。
+
+部署必須同時更新 `firestore.rules` 與網站；只部署網頁無法提供安全保證，舊頁面需重新整理。Firestore 權限規則限制欄位差異與伺服器時間，並以 `getAfter()` 要求日期更正與稽核紀錄成對提交。參考：[欄位權限](https://firebase.google.com/docs/firestore/security/rules-fields)、[伺服器 request.time](https://firebase.google.com/docs/reference/rules/rules.firestore.Request)、[原子操作驗證](https://firebase.google.com/docs/firestore/security/rules-conditions)。
+
+測試：`node tests/parent-date-cloud.test.cjs`、`node tests/task-card-updates.test.cjs`、`node tests/completion-rewards.test.cjs`，以及既有排程與識別名稱測試。畫面與同步測試使用隔離模擬紀錄；不代替學生勾選真實任務。
+
 v2.8.2：進度調整、計畫與執行原則及所選日期的計畫備註移到「調整與回報」頁籤最後；「當日任務」直接顯示當日任務，不再在前面顯示歷次調整說明。
 
 v2.8.1：精簡首頁倒數區，只顯示天數、週數與單行考試日期，移除上方收書及就寢文字；手機改為置中單欄。零用金主畫面僅保留三個金額，任務數與帳面說明移入「規則與明細」。零扣款顯示0元，縮短登入與操作提示。計獎及家庭紀錄邏輯不變。
