@@ -37,8 +37,10 @@ const {chromium}=createRequire('C:/Users/jensc/.cache/codex-runtimes/codex-prima
   const rects=await page.evaluate(()=>{const card=document.querySelector('#cards [data-id]'),input=card.querySelector('[data-field=completedOn]'),label=input.closest('label');return [card,label,input].map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right};});});
   assert.ok(rects[2].left>=rects[1].left-1&&rects[2].right<=rects[1].right+1,'date fits label');assert.ok(rects[2].right<=rects[0].right-8,'date stays inside card');
   if(process.env.CAP_TEST_SCREENSHOT_DIR)await card.screenshot({path:path.join(process.env.CAP_TEST_SCREENSHOT_DIR,'fixed-completion-'+viewport.width+'.png')});
-  await page.locator('[data-tab="adjust"]').click();await page.locator('#progressAdjustment summary').click();assert.equal(await page.locator('#catchUpSchedule tbody tr').count(),13);await page.locator('[data-tab="today"]').click();assert.equal(await page.locator('#today #planNotes,#stats .notice').count(),0);
+  await page.locator('[data-tab="adjust"]').click();await page.locator('#progressAdjustment summary').click();assert.equal(await page.locator('#catchUpSchedule tbody tr').count(),16);await page.locator('[data-tab="today"]').click();assert.equal(await page.locator('#today #planNotes,#stats .notice').count(),0);
   await page.evaluate(()=>window.capUI.cloudState('signedOut',{records:{},days:{}}));assert.match(await page.locator('#rewardSummary').textContent(),/登入後查看零用金/);assert.equal(await date.isDisabled(),true);
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);console.log(viewport.width+'px：學生日期鎖定、繞過欄位禁用仍拒絕、備註不能偽造日期、指定家長限改日期、獎勵重算與登出隱私通過');await page.close();
+  await select('2026-10-26');assert.equal(await page.locator('#cards [data-id]').count(),3);assert.match(await page.locator('#stats').textContent(),/145/);assert.match(await page.locator('#cards').textContent(),/36～44/);assert.match(await page.locator('#cards').textContent(),/23～30/);assert.match(await page.locator('#cards').textContent(),/21～33/);
+  if(process.env.CAP_TEST_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.CAP_TEST_SCREENSHOT_DIR,'holiday-'+viewport.width+'.png'),fullPage:true});
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);console.log(viewport.width+'px：補假三張任務145分、學生日期鎖定、家長更正、獎勵與登出隱私通過');await page.close();
  }}finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

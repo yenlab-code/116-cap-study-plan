@@ -2,8 +2,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {build,completed}=require('../scheduler.js');
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 const plan=JSON.parse(html.match(/<script id="plan-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
-const changed=plan.tasks.filter(t=>t.id.endsWith('-V27'));
-assert.equal(changed.length,13);
+const changed=plan.tasks.filter(t=>t.id.endsWith('-V27')||t.id.endsWith('-V30'));
+assert.equal(changed.length,16);
 const oldIds=['公民-20261018-V25','理化-20261018-V26','生物-20261018-V26'];
 for(const id of oldIds){assert.ok(!plan.tasks.some(t=>t.id===id));assert.ok(plan.retiredTasks.some(t=>t.id===id));}
 assert.deepEqual(plan.tasks.find(t=>t.id==='地科-20261018-V25').coverage,{start:5,end:11});
@@ -35,9 +35,7 @@ for(const source of sources){
  }
  assert.deepEqual(pages.sort((a,b)=>a-b),Array.from({length:source.coverage.end-source.coverage.start+1},(_,i)=>source.coverage.start+i),source.id);
 }
-assert.equal(plan.deferredRanges.reduce((s,t)=>s+t.minutes,0),145);
-assert.deepEqual(plan.deferredRanges.map(t=>[t.subject,t.coverage.start,t.coverage.end,t.minutes]),[['公民',34,46,35],['理化',56,64,70],['生物',46,56,40]]);
-assert.ok(plan.deferredRanges.every(t=>t.earliestDate==='2026-11-05'&&!t.date));
+assert.deepEqual(plan.deferredRanges,[]); // 10/26補假後已全部排回，仍逐頁核對原來源。
 assert.ok(html.includes('id="catchUpSchedule"'));
 assert.ok(html.includes('id="deferredSummary"'));
-console.log('三科補回、地科保留、舊紀錄隔離、全部頁碼無遺漏與145分鐘順延檢查通過');
+console.log('三科補回、補假接續、地科保留、舊紀錄隔離與全部頁碼無遺漏檢查通過');
