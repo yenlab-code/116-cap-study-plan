@@ -17,7 +17,7 @@ for(const date of plan.blockedDates.filter(d=>d<='2026-10-14')){
  assert.ok(r.moved.every(m=>!plan.blockedDates.includes(m.to)));
  assert.equal(JSON.stringify(state),before);
 }
-assert.equal(plan.endDate,'2026-11-04');
+assert.equal(plan.endDate,'2026-11-08');
 assert.equal(total('2026-10-10','2026-10-14'),0);
 assert.equal(total('2026-10-15','2026-10-15'),75);
 assert.deepEqual(plan.tasks.filter(t=>t.date==='2026-10-15').map(t=>[t.subject,t.coverage]),[['數學',{start:12,end:18}],['理化',{start:5,end:11}]]);
@@ -54,7 +54,7 @@ assert.equal(r.moved.length,0);
 r=build(plan,{records:{B1:{reason:'prerequisite'}},days:{}},'2026-10-15');
 assert.ok(r.needsHelp.includes('B1'));
 assert.ok(r.unreported.includes('F1'));
-r=build({...plan,tasks:[{id:'last',date:'2026-10-31',minutes:20,kind:'國一複習'}]},{records:{last:{reason:'event'}},days:{}},'2026-11-04');
+r=build({...plan,endDate:'2026-11-04',tasks:[{id:'last',date:'2026-10-31',minutes:20,kind:'國一複習'}]},{records:{last:{reason:'event'}},days:{}},'2026-11-04');
 assert.equal(r.moved.length,0);
 assert.ok(r.overflow.includes('last'));
 for(const subject of plan.weeklyQuota.map(r=>r[0])){
