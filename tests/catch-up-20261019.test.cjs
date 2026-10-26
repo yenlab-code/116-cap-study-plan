@@ -2,8 +2,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {build,completed}=require('../scheduler.js');
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 const plan=JSON.parse(html.match(/<script id="plan-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
-const changed=plan.tasks.filter(t=>t.id.endsWith('-V27')||t.id.endsWith('-V30'));
-assert.equal(changed.length,16);
+const changed=plan.tasks.filter(t=>t.id.endsWith('-V27')||t.id.endsWith('-V32'));
+assert.equal(changed.length,22);
 const oldIds=['公民-20261018-V25','理化-20261018-V26','生物-20261018-V26'];
 for(const id of oldIds){assert.ok(!plan.tasks.some(t=>t.id===id));assert.ok(plan.retiredTasks.some(t=>t.id===id));}
 assert.deepEqual(plan.tasks.find(t=>t.id==='地科-20261018-V25').coverage,{start:5,end:11});
