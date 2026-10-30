@@ -38,7 +38,7 @@
       let target;
       for (let i = 0; i < 14; i++) {
         const candidate = dateAdd(today, i);
-        if (plan.blockedDates?.includes(candidate)) continue;
+        if (plan.blockedDates?.includes(candidate) || plan.noCatchUpDates?.includes(candidate)) continue;
         if (plan.endDate && candidate > plan.endDate) break;
         if ((t.kind === '當前課程' || t.kind === '段考鞏固') && candidate >= '2026-10-14' && t.date < '2026-10-14') break;
         if ((occupied[candidate] || 0) + t.minutes <= capacity(candidate, days, plan)) {
@@ -55,3 +55,5 @@
   }
   return {build, capacity, completed};
 });
+
+
